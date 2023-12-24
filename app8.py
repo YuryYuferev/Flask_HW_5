@@ -66,5 +66,5 @@ async def delete_task(task_id: int):
     raise HTTPException(status_code=404, detail="Задача не найдена")
 
 
-# Запуск кода: uvicorn Task8:app --reload
+# Запуск кода: uvicorn app8:app --reload
 
