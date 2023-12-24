@@ -10,91 +10,61 @@
 # Для этого использовать библиотеку Pydantic.
 
 
-from flask import Flask, request, jsonify
-from marshmallow import Schema, fields, ValidationError, validates_schema, post_load
+from fastapi import FastAPI, HTTPException
+from typing import List
+from pydantic import BaseModel
 
-app = Flask(__name__)
+app = FastAPI()
+class Task(BaseModel):
+    id: int
+    title: str
+    description: str
+    status: str
 
-class Task:
-    def __init__(self, id, title, description, status):
-        self.id = id
-        self.title = title
-        self.description = description
-        self.status = status
 
-class TaskSchema(Schema):
-    id = fields.Int(dump_only=True)
-    title = fields.Str(required=True)
-    description = fields.Str(required=True)
-    status = fields.Str(required=True)
-
-    @validates_schema
-    def validate_status(self, data, **kwargs):
-        if data['status'] not in ['выполнена', 'не выполнена']:
-            raise ValidationError('Статус должен быть: "выполнена" или "не выполнена".')
-
-    @post_load
-    def make_task(self, data, **kwargs):
-        return Task(**data)
 # Список задач
 tasks = [
         Task(id=1, title="Покупки", description="Купить продукты в магазине", status="выполнена"),
-        Task(id=2, title="Проект", description="Завершить проект к концу недели", status="выполнена"),
+        Task(id=2, title="Проект", description="Завершить проект к концу недели", status="не выполнена"),
         Task(id=3, title="Тренировка", description="Пробежать 5 км", status="выполнена")
         ]
 
-# Получение списка всех задач
-@app.route('/tasks', methods=['GET'])
-def get_tasks():
-    tasks_schema = TaskSchema(many=True)
-    return jsonify(tasks_schema.dump(tasks))
+# GET /tasks - возвращает список всех задач
+@app.get("/tasks", response_model=List[Task])
+async def get_tasks():
+    return tasks
 
-# Получение задачи по ID
-@app.route('/tasks/<int:task_id>', methods=['GET'])
-def get_task(task_id):
-    if 0 <= task_id < len(tasks):
-        task_schema = TaskSchema()
-        return jsonify(task_schema.dump(tasks[task_id]))
-    else:
-        return "Задача не найдена", 404
+# GET /tasks/{id} - возвращает задачу с указанным идентификатором
+@app.get("/tasks/{task_id}", response_model=Task)
+async def get_task(task_id: int):
+    for task in tasks:
+        if task.id == task_id:
+            return task
+    raise HTTPException(status_code=404, detail="Задача не найдена")
+# POST /tasks - добавляет новую задачу
+@app.post("/tasks", response_model=Task)
+async def create_task(task: Task):
+    tasks.append(task)
+    return task
 
-# Добавление новой задачи
-@app.route('/tasks', methods=['POST'])
-def add_task():
-    try:
-        data = request.get_json()
-        task_schema = TaskSchema()
-        new_task = task_schema.load(data)
-        new_task.id = len(tasks)  # Присваиваем ID новой задаче
-        tasks.append(new_task)
-        return "Задача добавлена", 201
-    except ValidationError as e:
-        return str(e), 400
+# PUT /tasks/{id} - обновляет задачу с указанным идентификатором
+@app.put("/tasks/{task_id}", response_model=Task)
+async def update_task(task_id: int, task: Task):
+    for idx, existing_task in enumerate(tasks):
+        if existing_task.id == task_id:
+            tasks[idx] = task
+            return task
+    raise HTTPException(status_code=404, detail="Задача не найдена")
 
-# Обновление задачи по ID
-@app.route('/tasks/<int:task_id>', methods=['PUT'])
-def update_task(task_id):
-    if 0 <= task_id < len(tasks):
-        try:
-            data = request.get_json()
-            task_schema = TaskSchema()
-            updated_task = task_schema.load(data)
-            updated_task.id = task_id  # Устанавливаем ID обновляемой задачи
-            tasks[task_id] = updated_task
-            return "Задача обновлена"
-        except ValidationError as e:
-            return str(e), 400
-    else:
-        return "Задача не найдена", 404
+# DELETE /tasks/{id} - удаляет задачу с указанным идентификатором
+@app.delete("/tasks/{task_id}")
+async def delete_task(task_id: int):
+    for idx, existing_task in enumerate(tasks):
+        if existing_task.id == task_id:
+            del tasks[idx]
+            return {"message": "Задача удалена"}
+    raise HTTPException(status_code=404, detail="Задача не найдена")
 
-# Удаление задачи по ID
-@app.route('/tasks/<int:task_id>', methods=['DELETE'])
-def delete_task(task_id):
-    if 0 <= task_id < len(tasks):
-        del tasks[task_id]
-        return "Задача удалена"
-    else:
-        return "Задача не найдена", 404
 
-if __name__ == '__main__':
-    app.run(debug=True)
+# Запуск кода: uvicorn Task8:app --reload
+
