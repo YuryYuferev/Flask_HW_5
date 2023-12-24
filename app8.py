@@ -15,7 +15,6 @@ from marshmallow import Schema, fields, ValidationError, validates_schema, post_
 
 app = Flask(__name__)
 
-# Модель данных задачи с использованием Marshmallow
 class Task:
     def __init__(self, id, title, description, status):
         self.id = id
@@ -39,9 +38,9 @@ class TaskSchema(Schema):
         return Task(**data)
 # Список задач
 tasks = [
-        Task(id=1, title="Покупки", description="Купить продукты в магазине", status="todo"),
-        Task(id=2, title="Проект", description="Завершить проект к концу недели", status="in progress"),
-        Task(id=3, title="Тренировка", description="Пробежать 5 км", status="done")
+        Task(id=1, title="Покупки", description="Купить продукты в магазине", status="выполнена"),
+        Task(id=2, title="Проект", description="Завершить проект к концу недели", status="выполнена"),
+        Task(id=3, title="Тренировка", description="Пробежать 5 км", status="выполнена")
         ]
 
 # Получение списка всех задач
